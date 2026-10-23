@@ -61,16 +61,17 @@ header p{color:var(--muted);margin:.75rem 0 0;font-size:1.05rem}
 .card h2{font-size:1.45rem;margin-bottom:.2rem}
 .hint{color:var(--muted);font-size:.92rem;margin:0 0 1rem}
 
-/* tabs as chunky game buttons */
-.tabs{display:flex;justify-content:center;gap:8px;margin-bottom:1.25rem}
-.tabs button{font-family:inherit;font-weight:900;font-size:1rem;line-height:1;color:var(--muted);cursor:pointer;
-  background:var(--pill);border:0;border-radius:16px;padding:.8rem 1.2rem;
-  box-shadow:inset 0 -3px 0 var(--pillShade);color:var(--text-light);opacity:.75}
-.tabs button[aria-selected="true"]{opacity:1;color:var(--ink);
-  background:linear-gradient(var(--glow1),var(--glow2));
-  box-shadow:inset 0 -3px 0 rgba(0,90,120,.35),0 0 14px var(--glowHalo)}
-@media (prefers-color-scheme:dark){.tabs button[aria-selected="true"]{color:#0C2A40}}
-@media (max-width:520px){.tabs{display:flex}.tabs button{flex:1;padding:.8rem .5rem}}
+/* Grilled Cheese switch, glowing like the meters */
+.toggle{display:flex;gap:.75rem;align-items:center;cursor:pointer;font-weight:900;margin-top:1rem}
+.toggle input{position:absolute;opacity:0;width:1px;height:1px}
+.toggle .sw{position:relative;flex:none;width:52px;height:30px;border-radius:999px;
+  background:var(--pill);box-shadow:inset 0 2px 3px var(--pillShade);transition:background .2s,box-shadow .2s}
+.toggle .sw::after{content:"";position:absolute;top:4px;left:4px;width:22px;height:22px;border-radius:50%;
+  background:var(--text-light);box-shadow:0 2px 0 var(--pillShade);transition:transform .2s}
+.toggle input:checked+.sw{background:linear-gradient(var(--glow1),var(--glow2));box-shadow:0 0 10px var(--glowHalo)}
+.toggle input:checked+.sw::after{transform:translateX(22px);background:#fff}
+.toggle input:focus-visible+.sw{outline:3px solid var(--text-light);outline-offset:2px}
+.toggle small{display:block;font-weight:600;color:var(--muted);font-size:.8rem}
 
 .grid{display:grid;grid-template-columns:1fr 360px;gap:1.5rem;align-items:start}
 @media (max-width:860px){.grid{grid-template-columns:1fr}}
@@ -91,13 +92,15 @@ header p{color:var(--muted);margin:.75rem 0 0;font-size:1.05rem}
   .meter{grid-column:1/-1;grid-row:2}
 }
 
-.reset{display:flex;justify-content:flex-end;margin-top:1rem}
+.card-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:.2rem}
+.card-head h2{margin:0}
+.card-head .btn{padding:.5rem .9rem;font-size:.9rem}
 .btn{font:inherit;font-weight:900;border:0;border-radius:14px;padding:.65rem 1.1rem;cursor:pointer;margin-top:.8rem;
   color:#0C2A40;background:linear-gradient(var(--glow1),var(--glow2));
   box-shadow:inset 0 -3px 0 rgba(0,90,120,.35),0 0 12px var(--glowHalo)}
 .btn.ghost{margin:0;color:var(--text-light);background:var(--pill);box-shadow:inset 0 -3px 0 var(--pillShade)}
 
-.meter button:focus-visible,.btn:focus-visible,select:focus-visible,.tabs button:focus-visible{outline:3px solid var(--text-light);outline-offset:2px}
+.meter button:focus-visible,.btn:focus-visible,select:focus-visible{outline:3px solid var(--text-light);outline-offset:2px}
 
 /* results */
 aside{position:sticky;top:1rem;display:grid;gap:1rem}
@@ -142,17 +145,14 @@ details p{color:var(--muted)}
     <p>Enter your Sim's interest points (0–10, just like the in-game panel). Each aspiration adds up three interests, and the highest total that isn't your primary becomes the secondary.</p>
   </header>
 
-  <div class="tabs" role="tablist" aria-label="Calculator version">
-    <button role="tab" id="tab-classic" aria-selected="true" aria-controls="calc" type="button">Without Grilled Cheese</button>
-    <button role="tab" id="tab-gc" aria-selected="false" aria-controls="calc" type="button" tabindex="-1">With Grilled Cheese</button>
-  </div>
-
-  <div class="grid" id="calc" role="tabpanel" aria-labelledby="tab-classic">
+  <div class="grid">
     <section class="card" aria-labelledby="int-h">
-      <h2 id="int-h">Interests</h2>
+      <div class="card-head">
+        <h2 id="int-h">Interests</h2>
+        <button class="btn ghost" id="reset" type="button">Reset all</button>
+      </div>
       <p class="hint">Click a bar to set points.</p>
       <div id="interests"></div>
-      <div class="reset"><button class="btn ghost" id="reset" type="button">Reset all</button></div>
     </section>
 
     <aside>
@@ -161,6 +161,11 @@ details p{color:var(--muted)}
         <label class="field">
           <span>Primary aspiration</span>
           <select id="primary"></select>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="gc">
+          <span class="sw" aria-hidden="true"></span>
+          <span>Include Grilled Cheese<small>Food, entertainment and toys</small></span>
         </label>
       </section>
 
@@ -238,24 +243,10 @@ function fillPrimary(){
   sel.value = [...sel.options].some(o=>o.value===cur) ? cur : "";
 }
 fillPrimary();
-const tabs = [$("#tab-classic"), $("#tab-gc")];
-function selectTab(i){
-  tabs.forEach((t,j)=>{
-    t.setAttribute("aria-selected", i===j);
-    t.tabIndex = i===j ? 0 : -1;
-  });
-  $("#calc").setAttribute("aria-labelledby", tabs[i].id);
-  withGC = i===1;
+$("#gc").addEventListener("change",e=>{
+  withGC = e.target.checked;
   fillPrimary();
   update();
-}
-tabs.forEach((t,i)=>{
-  t.addEventListener("click",()=>selectTab(i));
-  t.addEventListener("keydown",e=>{
-    if(e.key==="ArrowRight"||e.key==="ArrowLeft"){
-      const n=(i+1)%2; tabs[n].focus(); selectTab(n);
-    }
-  });
 });
 sel.addEventListener("change",update);
 $("#reset").addEventListener("click",()=>{
